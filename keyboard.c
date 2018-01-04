@@ -54,7 +54,7 @@ Status KeyPressSynth(const char keycode, int state){
     char key_str[] = "";
     key_str[0] = keycode;
     KeySym key = XStringToKeysym(key_str);
-    KeySym key2 = XkbKeycodeToKeysym(display, XKeysymToKeycode(display,key), 0, 1<<state & ShiftMask ? 1 : 0);
+    KeySym key2 = XkbKeycodeToKeysym(display, XKeysymToKeycode(display,key), 0, ShiftMask ? 1 : 0);
 
     int return_focus_state;
     XGetInputFocus(display, &current_focus_window, &return_focus_state);
@@ -72,13 +72,13 @@ Status KeyPressSynth(const char keycode, int state){
     event.state = 1<<state;   
     event.keycode = XKeysymToKeycode(display,  key2);
     event.same_screen = True;
-    XSendEvent(display, InputFocus,True,KeyPressMask,(XEvent *)(&event));
+    XSendEvent(display, InputFocus, True, KeyPressMask,(XEvent *)(&event));
        
     memset(&event,0, sizeof(event));
     event.type = KeyRelease;   
     event.time = 1000;
        
-    return XSendEvent(display, InputFocus,True,KeyReleaseMask,(XEvent *)(&event));
+    return XSendEvent(display, InputFocus, True, KeyReleaseMask,(XEvent *)(&event));
 }
 
 unsigned char doKeyPress(const char* keycode,int modifier_name){
@@ -93,10 +93,11 @@ unsigned char typeSequence(const char *sequence, int modifier_name){
     display = XOpenDisplay(NULL);
     
     for(int i = 0; sequence[i] != '\0'; i++) {
-        //printf("%c",sequence[i]);
         if(KeyPressSynth(sequence[i],modifier_name)){
             XFlush(display);
         }else{
+            XFlush(display);
+            XCloseDisplay(display);
             return 0;
         }
     }
@@ -142,11 +143,10 @@ JNIEXPORT unsigned char JNICALL Java_ameliaclient_nativesupport_NativeKeyboardCo
 JNIEXPORT jboolean JNICALL Java_ameliaclient_nativesupport_NativeKeyboardController_nativeAnyKeyPressed(JNIEnv *env, jobject jobj){
     if(display == NULL){
         display = XOpenDisplay(NULL);
-        //Window root = RootWindow(display, DefaultScreen(display));
-        int ret = XGrabKey(display, AnyKey, AnyModifier, PointerWindow, 0, GrabModeAsync, GrabModeAsync);
-        printf("Was pressed %i",ret);
-        return (unsigned char)ret;
     }
+    int ret = XGrabKey(display, AnyKey, AnyModifier, InputFocus, False, GrabModeSync, GrabModeSync);
+    printf("Was pressed: %i",ret);
+    return (unsigned char)ret;
 }
 
 

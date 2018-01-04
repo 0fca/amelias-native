@@ -23,22 +23,25 @@
 #include <X11/keysymdef.h>
 
 int coords[2] = {0,0};
-unsigned char hasMoved = 0;
 /*
  * 
  */
 
 Display *display;
+unsigned char wasMoved = False;
 
-unsigned char doMouseClick(int button, int x, int y){       
+
+unsigned char doMouseClick(int button, int x, int y){   
     display = XOpenDisplay(NULL);
-    XEvent event;
-    Window root = RootWindow(display, DefaultScreen(display));
 
+    XEvent event;
+
+    Window root = RootWindow(display, DefaultScreen(display));
+    
     if(display == NULL)
     {
-            fprintf(stderr, "Default display is not accessible!!!\n");
-            return 0;
+        fprintf(stderr, "Default display is not accessible!!!\n");
+        return 0;
     }
     memset(&event, 0x00, sizeof(event));
     event.type = ButtonPress;
@@ -52,9 +55,8 @@ unsigned char doMouseClick(int button, int x, int y){
 
     while(event.xbutton.subwindow)
     {
-            event.xbutton.window = event.xbutton.subwindow;
-
-            XQueryPointer(display, event.xbutton.window, &event.xbutton.root, &event.xbutton.subwindow, &event.xbutton.x_root, &event.xbutton.y_root, &event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
+        event.xbutton.window = event.xbutton.subwindow;
+        XQueryPointer(display, event.xbutton.window, &event.xbutton.root, &event.xbutton.subwindow, &event.xbutton.x_root, &event.xbutton.y_root, &event.xbutton.x, &event.xbutton.y, &event.xbutton.state);
     }
 
     if(XSendEvent(display, PointerWindow, True, 0xfff, &event) == 0) {
@@ -76,11 +78,16 @@ unsigned char doMouseClick(int button, int x, int y){
 
 
 JNIEXPORT jboolean JNICALL Java_ameliaclient_nativesupport_NativeMouseController_hasMouseMoved(JNIEnv *env, jobject jobj){
-    return hasMoved;
+    if(wasMoved){
+        wasMoved = 0;
+        return 1;
+    }
+    return wasMoved;
 }
 
 JNIEXPORT void JNICALL Java_ameliaclient_nativesupport_NativeMouseController_sendCoords(JNIEnv *env, jobject jobj, jint x, jint y){
-    hasMoved = (unsigned char)(coords[0] != x || coords[1] != y);
+    wasMoved = (x != coords[0] && y != coords[1]);
+    
     coords[0] = (int)x;
     coords[1] = (int)y;
 }
